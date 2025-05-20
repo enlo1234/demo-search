@@ -41,6 +41,66 @@ const mockResults: SearchResult[] = [
     id: '8',
     title: 'AI Impact on Economy',
     description: 'Economic implications of artificial intelligence and automation.'
+  },
+  {
+    id: '9',
+    title: 'Circular Economy Initiatives',
+    description: 'Implementation of circular economic models in various industries.'
+  },
+  {
+    id: '10',
+    title: 'Economic Recovery Strategies',
+    description: 'Post-pandemic economic recovery plans and their effectiveness.'
+  },
+  {
+    id: '11',
+    title: 'Sharing Economy Platforms',
+    description: 'Analysis of peer-to-peer economic models and their market impact.'
+  },
+  {
+    id: '12',
+    title: 'Economic Inequality Report',
+    description: 'Study on global wealth distribution and economic disparities.'
+  },
+  {
+    id: '13',
+    title: 'Blue Economy Opportunities',
+    description: 'Sustainable use of ocean resources for economic growth.'
+  },
+  {
+    id: '14',
+    title: 'Behavioral Economics Study',
+    description: 'How psychological factors influence economic decision-making.'
+  },
+  {
+    id: '15',
+    title: 'Gig Economy Analysis',
+    description: 'Impact of freelance and temporary work on the global economy.'
+  },
+  {
+    id: '16',
+    title: 'Economic Innovation Index',
+    description: 'Measuring technological advancement and economic progress.'
+  },
+  {
+    id: '17',
+    title: 'Rural Economy Development',
+    description: 'Strategies for boosting economic growth in rural areas.'
+  },
+  {
+    id: '18',
+    title: 'Knowledge Economy Trends',
+    description: 'The role of information and expertise in modern economics.'
+  },
+  {
+    id: '19',
+    title: 'Economic Resilience Framework',
+    description: 'Building robust economic systems to withstand global challenges.'
+  },
+  {
+    id: '20',
+    title: 'Urban Economic Planning',
+    description: 'Economic development strategies for metropolitan areas.'
   }
 ];
 
