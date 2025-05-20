@@ -17,18 +17,12 @@ class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
   private batchTimeout: number | null = null;
   private stabilityTimeout: number | null = null;
-  private hasUserInteracted: boolean = false;
   private isInitialBatchSent: boolean = false;
 
   constructor() {
-    // Track user interactions
-    window.addEventListener('click', () => {
-      this.hasUserInteracted = true;
-      // If batch hasn't been sent yet, send it now
-      if (!this.isInitialBatchSent) {
-        this.logVisibleResults();
-      }
-    });
+    window.addEventListener('resultClick', ((event: CustomEvent) => {
+      this.logVisibleResults();
+    }) as EventListener);
 
     window.addEventListener('resultVisible', ((event: CustomEvent) => {
       const { result, index } = event.detail;
@@ -55,10 +49,6 @@ class EventBatcher {
   }
 
   private logVisibleResults(): void {
-    if (this.isInitialBatchSent) {
-      return;
-    }
-
     const visibleResultsArray = Array.from(this.visibleResults.entries()).map(([id, data]) => ({
       id,
       title: data.title,
@@ -73,7 +63,6 @@ class EventBatcher {
       };
 
       console.log('[BATCHED EVENT] view_search_result', batchedEvent);
-      this.isInitialBatchSent = true;
     }
   }
 }

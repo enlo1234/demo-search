@@ -66,10 +66,17 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({ result, index }) =>
     }
   }, [isVisible, result, index]);
 
+  const handleClick = () => {
+    window.dispatchEvent(new CustomEvent('resultClick', {
+      detail: { result, index }
+    }));
+  };
+
   return (
     <div 
       ref={ref}
-      className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+      onClick={handleClick}
+      className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
     >
       <h2 className="text-lg font-medium text-gray-800 mb-1">{result.title}</h2>
       <p className="text-gray-600">{result.description}</p>
