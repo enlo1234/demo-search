@@ -22,7 +22,7 @@ function App() {
         <div className="max-w-3xl w-full text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Search Events</h2>
           <p className="text-gray-600 mb-4">
-            Enter your search term below. Items within the viewport RIGHT BEFORE the user interaction on the page will be logged to the console as batched events.
+            Enter your search term below. Items within the viewport BY THE TIME (= RIGHT BEFORE) the user interaction on the page will be logged to the console as batched events.
           </p>
           <p className="text-gray-600 mb-8">
             Available search term: <span className="font-semibold">Economy</span>
