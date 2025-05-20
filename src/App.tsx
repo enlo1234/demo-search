@@ -25,7 +25,7 @@ function App() {
             Enter your search term below. Items within the viewport RIGHT BEFORE the user interaction on the page will be logged to the console as batched events.
           </p>
           <p className="text-gray-600 mb-8">
-            Available search term: Economy
+            Available search term: <span className="font-semibold">Economy</span>
           </p>
           <SearchBar onSearch={handleSearch} />
         </div>
