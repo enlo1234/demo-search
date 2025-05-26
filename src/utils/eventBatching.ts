@@ -15,8 +15,9 @@ interface ViewSearchResult {
 
 class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
-  private viewportChangeTimeout: NodeJS.Timeout | null = null;
-  private readonly VIEWPORT_DELAY = 5000; // 5 seconds delay after viewport change
+  private isViewportChanging: boolean = false;
+  private viewportChangeTimer: NodeJS.Timeout | null = null;
+  private batchedDuringChange: Set<string> = new Set();
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
@@ -29,26 +30,39 @@ class EventBatcher {
         title: result.title,
         position: index + 1
       });
-      this.scheduleViewportBatch();
+      
+      if (this.isViewportChanging) {
+        this.batchedDuringChange.add(result.id);
+      }
+      this.handleViewportChange();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
       this.visibleResults.delete(result.id);
-      this.scheduleViewportBatch();
+      this.handleViewportChange();
     }) as EventListener);
+
+    // Track scroll events
+    window.addEventListener('scroll', () => {
+      this.handleViewportChange();
+    }, { passive: true });
   }
 
-  private scheduleViewportBatch() {
-    // Reset the timeout on each viewport change
-    if (this.viewportChangeTimeout) {
-      clearTimeout(this.viewportChangeTimeout);
+  private handleViewportChange() {
+    // Mark viewport as changing
+    this.isViewportChanging = true;
+
+    // Reset the timer on each change
+    if (this.viewportChangeTimer) {
+      clearTimeout(this.viewportChangeTimer);
     }
 
-    // Schedule new batch after VIEWPORT_DELAY
-    this.viewportChangeTimeout = setTimeout(() => {
-      this.logVisibleResults('viewport_change');
-    }, this.VIEWPORT_DELAY);
+    // Set timer to detect when viewport changes stop
+    this.viewportChangeTimer = setTimeout(() => {
+      this.isViewportChanging = false;
+      this.logBatchedResults();
+    }, 150); // Small delay to detect when scrolling/changes stop
   }
 
   addEvent(event: SearchEvent): void {
@@ -57,12 +71,37 @@ class EventBatcher {
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
     this.visibleResults.clear();
+    this.batchedDuringChange.clear();
     results.forEach((result, index) => {
       this.visibleResults.set(result.id, { title: result.title, position: index + 1 });
     });
   }
 
-  private logVisibleResults(trigger: 'viewport_change' | 'click'): void {
+  private logBatchedResults() {
+    const batchedResults = Array.from(this.batchedDuringChange).map(id => {
+      const data = this.visibleResults.get(id);
+      return {
+        id,
+        title: data!.title,
+        position: data!.position
+      };
+    });
+
+    if (batchedResults.length > 0) {
+      const batchedEvent: ViewSearchResult = {
+        timestamp: new Date().toISOString(),
+        count: batchedResults.length,
+        results: batchedResults
+      };
+
+      console.log('[BATCHED EVENT] view_search_result (viewport_change)', batchedEvent);
+    }
+
+    // Clear the batched results after logging
+    this.batchedDuringChange.clear();
+  }
+
+  private logVisibleResults(trigger: 'click'): void {
     const visibleResultsArray = Array.from(this.visibleResults.entries()).map(([id, data]) => ({
       id,
       title: data.title,
