@@ -15,9 +15,8 @@ interface ViewSearchResult {
 
 class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
-  private batchTimeout: NodeJS.Timeout | null = null;
-  private lastBatchTime: number = 0;
-  private readonly BATCH_INTERVAL = 5000; // 5 seconds
+  private viewportChangeTimeout: NodeJS.Timeout | null = null;
+  private readonly VIEWPORT_DELAY = 5000; // 5 seconds delay after viewport change
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
@@ -30,36 +29,26 @@ class EventBatcher {
         title: result.title,
         position: index + 1
       });
-      this.scheduleBatch();
+      this.scheduleViewportBatch();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
       this.visibleResults.delete(result.id);
-      this.scheduleBatch();
+      this.scheduleViewportBatch();
     }) as EventListener);
-
-    // Start periodic check
-    this.startPeriodicCheck();
   }
 
-  private startPeriodicCheck() {
-    setInterval(() => {
-      const now = Date.now();
-      if (now - this.lastBatchTime >= this.BATCH_INTERVAL && this.visibleResults.size > 0) {
-        this.logVisibleResults('periodic');
-      }
-    }, this.BATCH_INTERVAL);
-  }
-
-  private scheduleBatch() {
-    if (this.batchTimeout) {
-      clearTimeout(this.batchTimeout);
+  private scheduleViewportBatch() {
+    // Reset the timeout on each viewport change
+    if (this.viewportChangeTimeout) {
+      clearTimeout(this.viewportChangeTimeout);
     }
 
-    this.batchTimeout = setTimeout(() => {
+    // Schedule new batch after VIEWPORT_DELAY
+    this.viewportChangeTimeout = setTimeout(() => {
       this.logVisibleResults('viewport_change');
-    }, 100); // Small delay to batch rapid changes
+    }, this.VIEWPORT_DELAY);
   }
 
   addEvent(event: SearchEvent): void {
@@ -71,10 +60,9 @@ class EventBatcher {
     results.forEach((result, index) => {
       this.visibleResults.set(result.id, { title: result.title, position: index + 1 });
     });
-    this.scheduleBatch();
   }
 
-  private logVisibleResults(trigger: 'viewport_change' | 'periodic' | 'click'): void {
+  private logVisibleResults(trigger: 'viewport_change' | 'click'): void {
     const visibleResultsArray = Array.from(this.visibleResults.entries()).map(([id, data]) => ({
       id,
       title: data.title,
@@ -89,7 +77,6 @@ class EventBatcher {
       };
 
       console.log(`[BATCHED EVENT] view_search_result (${trigger})`, batchedEvent);
-      this.lastBatchTime = Date.now();
     }
   }
 }
