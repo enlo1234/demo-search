@@ -78,14 +78,19 @@ class EventBatcher {
   }
 
   private logBatchedResults() {
-    const batchedResults = Array.from(this.batchedDuringChange).map(id => {
-      const data = this.visibleResults.get(id);
-      return {
-        id,
-        title: data!.title,
-        position: data!.position
-      };
-    });
+    const batchedResults = Array.from(this.batchedDuringChange)
+      .map(id => {
+        const data = this.visibleResults.get(id);
+        return { id, data };
+      })
+      .filter((item): item is { id: string; data: { title: string; position: number } } => 
+        item.data !== undefined
+      )
+      .map(item => ({
+        id: item.id,
+        title: item.data.title,
+        position: item.data.position
+      }));
 
     if (batchedResults.length > 0) {
       const batchedEvent: ViewSearchResult = {
