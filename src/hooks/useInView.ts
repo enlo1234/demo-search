@@ -9,7 +9,7 @@ export function useInView(ref: RefObject<Element>): boolean {
       {
         root: null,
         rootMargin: '0px',
-        threshold: 0.5, // Element is considered visible when 50% is in viewport
+        threshold: 0.1, // Reduced threshold to detect items more quickly
       }
     );
 
