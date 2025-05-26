@@ -18,7 +18,7 @@ class EventBatcher {
   private isViewportChanging: boolean = false;
   private viewportChangeTimer: NodeJS.Timeout | null = null;
   private stabilityTimer: NodeJS.Timeout | null = null;
-  private seenDuringChange: Set<string> = new Set();
+  private seenDuringChange: Map<string, { title: string; position: number }> = new Map();
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
@@ -27,26 +27,26 @@ class EventBatcher {
 
     window.addEventListener('resultVisible', ((event: CustomEvent) => {
       const { result, index } = event.detail;
-      this.visibleResults.set(result.id, {
+      const itemData = {
         title: result.title,
         position: index + 1
-      });
+      };
+      
+      this.visibleResults.set(result.id, itemData);
       
       if (this.isViewportChanging) {
-        this.seenDuringChange.add(result.id);
+        // Store the position when the item was first seen
+        if (!this.seenDuringChange.has(result.id)) {
+          this.seenDuringChange.set(result.id, itemData);
+        }
       }
       this.handleViewportChange();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
-      if (this.isViewportChanging) {
-        // Don't remove from seenDuringChange if it was seen during viewport change
-        this.visibleResults.delete(result.id);
-      } else {
-        this.visibleResults.delete(result.id);
-        this.seenDuringChange.delete(result.id);
-      }
+      // Only remove from visibleResults, keep in seenDuringChange if viewport is changing
+      this.visibleResults.delete(result.id);
       this.handleViewportChange();
     }) as EventListener);
 
@@ -64,7 +64,12 @@ class EventBatcher {
     // Mark viewport as changing if not already
     if (!this.isViewportChanging) {
       this.isViewportChanging = true;
-      this.seenDuringChange.clear(); // Clear the seen set when starting a new change period
+      this.seenDuringChange.clear(); // Clear the seen map when starting a new change period
+      
+      // Initialize seenDuringChange with currently visible results
+      this.visibleResults.forEach((data, id) => {
+        this.seenDuringChange.set(id, data);
+      });
     }
 
     // Set new stability timer
@@ -85,21 +90,11 @@ class EventBatcher {
   }
 
   private logBatchedResults() {
-    const batchedResults = Array.from(this.seenDuringChange)
-      .map(id => {
-        const data = this.visibleResults.get(id) || 
-                    // Check if the result was seen during change but is no longer visible
-                    Array.from(this.visibleResults.entries())
-                      .find(([resultId]) => resultId === id)?.[1];
-        return { id, data };
-      })
-      .filter((item): item is { id: string; data: { title: string; position: number } } => 
-        item.data !== undefined
-      )
-      .map(item => ({
-        id: item.id,
-        title: item.data.title,
-        position: item.data.position
+    const batchedResults = Array.from(this.seenDuringChange.entries())
+      .map(([id, data]) => ({
+        id,
+        title: data.title,
+        position: data.position
       }));
 
     if (batchedResults.length > 0) {
