@@ -51,6 +51,11 @@ class EventBatcher {
     window.addEventListener('scroll', () => {
       this.handleViewportChange();
     }, { passive: true });
+
+    // Add beforeunload event listener
+    window.addEventListener('beforeunload', () => {
+      this.logVisibleResults('exit');
+    });
   }
 
   private handleViewportChange() {
@@ -112,7 +117,7 @@ class EventBatcher {
     this.seenDuringChange.clear();
   }
 
-  private logVisibleResults(trigger: 'click'): void {
+  private logVisibleResults(trigger: 'click' | 'exit'): void {
     const visibleResultsArray = Array.from(this.visibleResults.entries())
       .filter(([id]) => !this.alreadyLoggedItems.has(id))
       .map(([id, data]) => {
