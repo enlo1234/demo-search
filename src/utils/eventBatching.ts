@@ -18,6 +18,7 @@ class EventBatcher {
   private isViewportChanging: boolean = false;
   private viewportChangeTimer: NodeJS.Timeout | null = null;
   private batchedDuringChange: Set<string> = new Set();
+  private stabilityTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
@@ -43,26 +44,28 @@ class EventBatcher {
       this.handleViewportChange();
     }) as EventListener);
 
-    // Track scroll events
     window.addEventListener('scroll', () => {
       this.handleViewportChange();
     }, { passive: true });
   }
 
   private handleViewportChange() {
-    // Mark viewport as changing
-    this.isViewportChanging = true;
-
-    // Reset the timer on each change
-    if (this.viewportChangeTimer) {
-      clearTimeout(this.viewportChangeTimer);
+    // Clear any existing stability timer
+    if (this.stabilityTimer) {
+      clearTimeout(this.stabilityTimer);
     }
 
-    // Set timer to detect when viewport changes stop
-    this.viewportChangeTimer = setTimeout(() => {
+    // Mark viewport as changing if not already
+    if (!this.isViewportChanging) {
+      this.isViewportChanging = true;
+    }
+
+    // Set new stability timer
+    this.stabilityTimer = setTimeout(() => {
+      // If we reach here, viewport has been stable for 3 seconds
       this.isViewportChanging = false;
       this.logBatchedResults();
-    }, 150); // Small delay to detect when scrolling/changes stop
+    }, 3000);
   }
 
   addEvent(event: SearchEvent): void {
@@ -70,8 +73,7 @@ class EventBatcher {
   }
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
-    // Instead of clearing and setting all results, we'll let the IntersectionObserver
-    // naturally populate the visible results through the resultVisible/resultHidden events
+    // Let the IntersectionObserver naturally populate the visible results
     this.batchedDuringChange.clear();
   }
 
