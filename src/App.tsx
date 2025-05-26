@@ -22,10 +22,7 @@ function App() {
         <div className="max-w-3xl w-full text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Search Events</h2>
           <p className="text-gray-600 mb-4">
-            Enter the only available search term 'economy' below and check the batch event.
-          </p>
-          <p className="text-gray-600 mb-4">
-            Returned search result items within the viewport will be logged and pushed:
+            Enter the only available search term 'economy' below and check the batch event. Returned search result items within the viewport will be logged and pushed:
             <ul className="list-disc text-left max-w-md mx-auto mt-2 space-y-1">
               <li>When clicking a result</li>
               <li>When closing the window/tab</li>
