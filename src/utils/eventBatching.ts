@@ -16,7 +16,8 @@ interface ViewSearchResult {
 class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
   private snapshotTimer: NodeJS.Timeout | null = null;
-  private lastSnapshotState: string = ''; // Track the last snapshot state
+  private loggedItems: Set<string> = new Set();
+  private lastSnapshotTime: number = 0;
 
   constructor() {
     // Handle click events
@@ -33,13 +34,11 @@ class EventBatcher {
       };
       
       this.visibleResults.set(result.id, itemData);
-      this.checkForChanges();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
       this.visibleResults.delete(result.id);
-      this.checkForChanges();
     }) as EventListener);
 
     // Add beforeunload event listener
@@ -59,49 +58,49 @@ class EventBatcher {
 
     // Create new timer that fires every 3 seconds
     this.snapshotTimer = setInterval(() => {
-      this.checkForChanges();
+      const now = Date.now();
+      if (now - this.lastSnapshotTime >= 3000) {
+        this.checkNewItems();
+        this.lastSnapshotTime = now;
+      }
     }, 3000);
   }
 
-  private getCurrentStateHash(): string {
-    const sortedResults = Array.from(this.visibleResults.entries())
-      .sort(([idA], [idB]) => idA.localeCompare(idB))
-      .map(([id, data]) => `${id}:${data.position}`).join('|');
-    return sortedResults;
-  }
+  private checkNewItems() {
+    const newItems = Array.from(this.visibleResults.entries())
+      .filter(([id]) => !this.loggedItems.has(id))
+      .map(([id, data]) => ({
+        id,
+        title: data.title,
+        position: data.position
+      }))
+      .sort((a, b) => a.position - b.position);
 
-  private checkForChanges() {
-    const currentState = this.getCurrentStateHash();
-    
-    if (currentState !== this.lastSnapshotState && this.visibleResults.size > 0) {
-      const visibleResultsArray = Array.from(this.visibleResults.entries())
-        .map(([id, data]) => ({
-          id,
-          title: data.title,
-          position: data.position
-        }))
-        .sort((a, b) => a.position - b.position);
-
+    if (newItems.length > 0) {
       const batchedEvent: ViewSearchResult = {
         timestamp: new Date().toISOString(),
-        count: visibleResultsArray.length,
-        results: visibleResultsArray
+        count: newItems.length,
+        results: newItems
       };
 
       console.log('[BATCHED EVENT] view_search_result (snapshot)', batchedEvent);
-      this.lastSnapshotState = currentState;
+      
+      // Mark these items as logged
+      newItems.forEach(item => this.loggedItems.add(item.id));
     }
   }
 
   addEvent(event: SearchEvent): void {
     console.log('[EVENT] search', event);
-    this.lastSnapshotState = ''; // Reset state hash when new search occurs
+    this.loggedItems.clear();
     this.visibleResults.clear();
+    this.lastSnapshotTime = Date.now();
   }
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
-    this.lastSnapshotState = ''; // Reset state hash for new search
+    this.loggedItems.clear();
     this.visibleResults.clear();
+    this.lastSnapshotTime = Date.now();
   }
 
   private logVisibleResults(trigger: 'click' | 'exit'): void {
