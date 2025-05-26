@@ -17,7 +17,6 @@ class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
   private snapshotTimer: NodeJS.Timeout | null = null;
   private alreadySeenItems: Set<string> = new Set();
-  private lastSnapshotTime: number = Date.now();
 
   constructor() {
     // Handle click events
@@ -34,7 +33,6 @@ class EventBatcher {
       };
       
       this.visibleResults.set(result.id, itemData);
-      this.checkForNewItems();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
@@ -56,38 +54,34 @@ class EventBatcher {
       clearInterval(this.snapshotTimer);
     }
 
+    // Create new timer that fires exactly every 3 seconds
     this.snapshotTimer = setInterval(() => {
-      this.checkForNewItems();
+      this.logNewVisibleResults();
     }, 3000);
   }
 
-  private checkForNewItems() {
-    const now = Date.now();
-    if (now - this.lastSnapshotTime >= 3000) {
-      const currentItems = Array.from(this.visibleResults.entries());
-      const newItems = currentItems
-        .filter(([id]) => !this.alreadySeenItems.has(id))
-        .map(([id, data]) => ({
-          id,
-          title: data.title,
-          position: data.position
-        }))
-        .sort((a, b) => a.position - b.position);
+  private logNewVisibleResults() {
+    const currentItems = Array.from(this.visibleResults.entries());
+    const newItems = currentItems
+      .filter(([id]) => !this.alreadySeenItems.has(id))
+      .map(([id, data]) => ({
+        id,
+        title: data.title,
+        position: data.position
+      }))
+      .sort((a, b) => a.position - b.position);
 
-      if (newItems.length > 0) {
-        const batchedEvent: ViewSearchResult = {
-          timestamp: new Date().toISOString(),
-          count: newItems.length,
-          results: newItems
-        };
+    if (newItems.length > 0) {
+      const batchedEvent: ViewSearchResult = {
+        timestamp: new Date().toISOString(),
+        count: newItems.length,
+        results: newItems
+      };
 
-        console.log('[BATCHED EVENT] view_search_result (snapshot)', batchedEvent);
-        
-        // Mark these items as seen
-        newItems.forEach(item => this.alreadySeenItems.add(item.id));
-      }
+      console.log('[BATCHED EVENT] view_search_result (timer)', batchedEvent);
       
-      this.lastSnapshotTime = now;
+      // Mark these items as seen
+      newItems.forEach(item => this.alreadySeenItems.add(item.id));
     }
   }
 
@@ -95,13 +89,11 @@ class EventBatcher {
     console.log('[EVENT] search', event);
     this.alreadySeenItems.clear();
     this.visibleResults.clear();
-    this.lastSnapshotTime = Date.now();
   }
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
     this.alreadySeenItems.clear();
     this.visibleResults.clear();
-    this.lastSnapshotTime = Date.now();
   }
 
   private logVisibleResults(trigger: 'click' | 'exit'): void {
