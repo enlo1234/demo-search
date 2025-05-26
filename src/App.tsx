@@ -24,10 +24,13 @@ function App() {
           <p className="text-gray-600 mb-4">
             Enter your search term below and check the batch event.
           </p>
-          <p className="text-gray-600 mb-4"> Returned search result items within the viewport will be logged and pushed when:
-            When clicking a result
-When closing the window/tab
-1 second after the viewport becomes stable
+          <p className="text-gray-600 mb-4">
+            Returned search result items within the viewport will be logged and pushed:
+            <ul className="list-disc text-left max-w-md mx-auto mt-2 space-y-1">
+              <li>When clicking a result</li>
+              <li>When closing the window/tab</li>
+              <li>1 second after the viewport becomes stable</li>
+            </ul>
           </p>
           <p className="text-gray-600 mb-8">
             Available search term: <span className="font-semibold">Economy</span>
