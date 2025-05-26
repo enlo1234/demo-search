@@ -9,7 +9,7 @@ export function useInView(ref: RefObject<Element>): boolean {
       {
         root: null,
         rootMargin: '0px',
-        threshold: [0.1, 0.5, 1.0], // Trigger at multiple thresholds for better sensitivity
+        threshold: 0.1, // Element is considered visible when 10% is in viewport
       }
     );
 
