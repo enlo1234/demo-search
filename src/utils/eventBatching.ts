@@ -13,23 +13,29 @@ interface ViewSearchResult {
   }>;
 }
 
+interface VisibilityData {
+  title: string;
+  position: number;
+  visibleSince: number;
+}
+
 class EventBatcher {
-  private visibleResults: Map<string, { title: string; position: number }> = new Map();
+  private visibleResults: Map<string, VisibilityData> = new Map();
   private snapshotTimer: NodeJS.Timeout | null = null;
   private alreadySeenItems: Set<string> = new Set();
+  private readonly MINIMUM_VISIBILITY_DURATION = 500; // 500ms minimum visibility time
 
   constructor() {
-    // Handle click events
     window.addEventListener('resultClick', ((event: CustomEvent) => {
       this.logVisibleResults('click');
     }) as EventListener);
 
-    // Handle visibility changes
     window.addEventListener('resultVisible', ((event: CustomEvent) => {
       const { result, index } = event.detail;
-      const itemData = {
+      const itemData: VisibilityData = {
         title: result.title,
-        position: index + 1
+        position: index + 1,
+        visibleSince: Date.now()
       };
       
       this.visibleResults.set(result.id, itemData);
@@ -40,12 +46,10 @@ class EventBatcher {
       this.visibleResults.delete(result.id);
     }) as EventListener);
 
-    // Add beforeunload event listener
     window.addEventListener('beforeunload', () => {
       this.logVisibleResults('exit');
     });
 
-    // Start the snapshot timer
     this.startSnapshotTimer();
   }
 
@@ -54,16 +58,20 @@ class EventBatcher {
       clearInterval(this.snapshotTimer);
     }
 
-    // Create new timer that fires exactly every 3 seconds
     this.snapshotTimer = setInterval(() => {
       this.logNewVisibleResults();
     }, 3000);
   }
 
   private logNewVisibleResults() {
+    const now = Date.now();
     const currentItems = Array.from(this.visibleResults.entries());
-    const newItems = currentItems
-      .filter(([id]) => !this.alreadySeenItems.has(id))
+    
+    const stableItems = currentItems
+      .filter(([id, data]) => {
+        const hasBeenVisibleLongEnough = (now - data.visibleSince) >= this.MINIMUM_VISIBILITY_DURATION;
+        return hasBeenVisibleLongEnough && !this.alreadySeenItems.has(id);
+      })
       .map(([id, data]) => ({
         id,
         title: data.title,
@@ -71,17 +79,16 @@ class EventBatcher {
       }))
       .sort((a, b) => a.position - b.position);
 
-    if (newItems.length > 0) {
+    if (stableItems.length > 0) {
       const batchedEvent: ViewSearchResult = {
         timestamp: new Date().toISOString(),
-        count: newItems.length,
-        results: newItems
+        count: stableItems.length,
+        results: stableItems
       };
 
       console.log('[BATCHED EVENT] view_search_result (timer)', batchedEvent);
       
-      // Mark these items as seen
-      newItems.forEach(item => this.alreadySeenItems.add(item.id));
+      stableItems.forEach(item => this.alreadySeenItems.add(item.id));
     }
   }
 
@@ -97,7 +104,9 @@ class EventBatcher {
   }
 
   private logVisibleResults(trigger: 'click' | 'exit'): void {
+    const now = Date.now();
     const visibleResultsArray = Array.from(this.visibleResults.entries())
+      .filter(([_, data]) => (now - data.visibleSince) >= this.MINIMUM_VISIBILITY_DURATION)
       .map(([id, data]) => ({
         id,
         title: data.title,
