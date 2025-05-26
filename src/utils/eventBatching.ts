@@ -70,11 +70,9 @@ class EventBatcher {
   }
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
-    this.visibleResults.clear();
+    // Instead of clearing and setting all results, we'll let the IntersectionObserver
+    // naturally populate the visible results through the resultVisible/resultHidden events
     this.batchedDuringChange.clear();
-    results.forEach((result, index) => {
-      this.visibleResults.set(result.id, { title: result.title, position: index + 1 });
-    });
   }
 
   private logBatchedResults() {

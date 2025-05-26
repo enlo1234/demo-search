@@ -27,11 +27,8 @@ export function useSearch() {
         timestamp
       });
 
-      // Update visible results
-      eventBatcher.updateVisibleResults(
-        searchResults.map(r => ({ id: r.id, title: r.title })),
-        timestamp
-      );
+      // Let the IntersectionObserver handle visible results naturally
+      eventBatcher.updateVisibleResults([], timestamp);
     }, 800);
     
     return () => clearTimeout(timer);
