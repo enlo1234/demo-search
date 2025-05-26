@@ -18,13 +18,14 @@ class EventBatcher {
   private snapshotTimer: NodeJS.Timeout | null = null;
   private alreadySeenItems: Set<string> = new Set();
   private lastSnapshotTime: number = Date.now();
-  private pendingVisibilityUpdates: Map<string, { title: string; position: number }> = new Map();
 
   constructor() {
+    // Handle click events
     window.addEventListener('resultClick', ((event: CustomEvent) => {
       this.logVisibleResults('click');
     }) as EventListener);
 
+    // Handle visibility changes
     window.addEventListener('resultVisible', ((event: CustomEvent) => {
       const { result, index } = event.detail;
       const itemData = {
@@ -32,20 +33,21 @@ class EventBatcher {
         position: index + 1
       };
       
-      this.pendingVisibilityUpdates.set(result.id, itemData);
-      this.processVisibilityUpdates();
+      this.visibleResults.set(result.id, itemData);
+      this.checkForNewItems();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
       this.visibleResults.delete(result.id);
-      this.pendingVisibilityUpdates.delete(result.id);
     }) as EventListener);
 
+    // Add beforeunload event listener
     window.addEventListener('beforeunload', () => {
       this.logVisibleResults('exit');
     });
 
+    // Start the snapshot timer
     this.startSnapshotTimer();
   }
 
@@ -55,21 +57,12 @@ class EventBatcher {
     }
 
     this.snapshotTimer = setInterval(() => {
-      this.processVisibilityUpdates();
+      this.checkForNewItems();
     }, 3000);
   }
 
-  private processVisibilityUpdates() {
+  private checkForNewItems() {
     const now = Date.now();
-    
-    // Add pending items to visible results
-    this.pendingVisibilityUpdates.forEach((data, id) => {
-      if (!this.alreadySeenItems.has(id)) {
-        this.visibleResults.set(id, data);
-      }
-    });
-    this.pendingVisibilityUpdates.clear();
-
     if (now - this.lastSnapshotTime >= 3000) {
       const currentItems = Array.from(this.visibleResults.entries());
       const newItems = currentItems
@@ -90,6 +83,7 @@ class EventBatcher {
 
         console.log('[BATCHED EVENT] view_search_result (snapshot)', batchedEvent);
         
+        // Mark these items as seen
         newItems.forEach(item => this.alreadySeenItems.add(item.id));
       }
       
@@ -101,14 +95,12 @@ class EventBatcher {
     console.log('[EVENT] search', event);
     this.alreadySeenItems.clear();
     this.visibleResults.clear();
-    this.pendingVisibilityUpdates.clear();
     this.lastSnapshotTime = Date.now();
   }
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
     this.alreadySeenItems.clear();
     this.visibleResults.clear();
-    this.pendingVisibilityUpdates.clear();
     this.lastSnapshotTime = Date.now();
   }
 
