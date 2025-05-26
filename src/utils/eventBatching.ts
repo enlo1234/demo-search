@@ -78,7 +78,7 @@ class EventBatcher {
     this.stabilityTimer = setTimeout(() => {
       this.isViewportChanging = false;
       this.logBatchedResults();
-    }, 5000);
+    }, 1000); // Changed from 5000 to 1000 milliseconds
   }
 
   addEvent(event: SearchEvent): void {
