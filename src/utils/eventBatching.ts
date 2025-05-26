@@ -17,8 +17,8 @@ class EventBatcher {
   private visibleResults: Map<string, { title: string; position: number }> = new Map();
   private isViewportChanging: boolean = false;
   private viewportChangeTimer: NodeJS.Timeout | null = null;
-  private batchedDuringChange: Set<string> = new Set();
   private stabilityTimer: NodeJS.Timeout | null = null;
+  private seenDuringChange: Set<string> = new Set();
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
@@ -33,14 +33,20 @@ class EventBatcher {
       });
       
       if (this.isViewportChanging) {
-        this.batchedDuringChange.add(result.id);
+        this.seenDuringChange.add(result.id);
       }
       this.handleViewportChange();
     }) as EventListener);
 
     window.addEventListener('resultHidden', ((event: CustomEvent) => {
       const { result } = event.detail;
-      this.visibleResults.delete(result.id);
+      if (this.isViewportChanging) {
+        // Don't remove from seenDuringChange if it was seen during viewport change
+        this.visibleResults.delete(result.id);
+      } else {
+        this.visibleResults.delete(result.id);
+        this.seenDuringChange.delete(result.id);
+      }
       this.handleViewportChange();
     }) as EventListener);
 
@@ -58,6 +64,7 @@ class EventBatcher {
     // Mark viewport as changing if not already
     if (!this.isViewportChanging) {
       this.isViewportChanging = true;
+      this.seenDuringChange.clear(); // Clear the seen set when starting a new change period
     }
 
     // Set new stability timer
@@ -74,13 +81,16 @@ class EventBatcher {
 
   updateVisibleResults(results: Array<{ id: string; title: string }>, timestamp: string): void {
     // Let the IntersectionObserver naturally populate the visible results
-    this.batchedDuringChange.clear();
+    this.seenDuringChange.clear();
   }
 
   private logBatchedResults() {
-    const batchedResults = Array.from(this.batchedDuringChange)
+    const batchedResults = Array.from(this.seenDuringChange)
       .map(id => {
-        const data = this.visibleResults.get(id);
+        const data = this.visibleResults.get(id) || 
+                    // Check if the result was seen during change but is no longer visible
+                    Array.from(this.visibleResults.entries())
+                      .find(([resultId]) => resultId === id)?.[1];
         return { id, data };
       })
       .filter((item): item is { id: string; data: { title: string; position: number } } => 
@@ -102,8 +112,8 @@ class EventBatcher {
       console.log('[BATCHED EVENT] view_search_result (viewport_change)', batchedEvent);
     }
 
-    // Clear the batched results after logging
-    this.batchedDuringChange.clear();
+    // Clear the seen results after logging
+    this.seenDuringChange.clear();
   }
 
   private logVisibleResults(trigger: 'click'): void {
