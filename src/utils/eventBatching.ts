@@ -23,7 +23,7 @@ class EventBatcher {
 
   constructor() {
     window.addEventListener('resultClick', ((event: CustomEvent) => {
-      this.logVisibleResults('click');
+      this.logVisibleResults('click', true); // Added true parameter to force logging
     }) as EventListener);
 
     window.addEventListener('resultVisible', ((event: CustomEvent) => {
@@ -54,7 +54,7 @@ class EventBatcher {
 
     // Add beforeunload event listener
     window.addEventListener('beforeunload', () => {
-      this.logVisibleResults('exit');
+      this.logVisibleResults('exit', true); // Added true parameter to force logging
     });
   }
 
@@ -78,7 +78,7 @@ class EventBatcher {
     this.stabilityTimer = setTimeout(() => {
       this.isViewportChanging = false;
       this.logBatchedResults();
-    }, 1000); // Changed from 5000 to 1000 milliseconds
+    }, 1000);
   }
 
   addEvent(event: SearchEvent): void {
@@ -117,11 +117,13 @@ class EventBatcher {
     this.seenDuringChange.clear();
   }
 
-  private logVisibleResults(trigger: 'click' | 'exit'): void {
+  private logVisibleResults(trigger: 'click' | 'exit', forceLog: boolean = false): void {
     const visibleResultsArray = Array.from(this.visibleResults.entries())
-      .filter(([id]) => !this.alreadyLoggedItems.has(id))
+      .filter(([id]) => forceLog || !this.alreadyLoggedItems.has(id))
       .map(([id, data]) => {
-        this.alreadyLoggedItems.add(id); // Mark as logged
+        if (!forceLog) {
+          this.alreadyLoggedItems.add(id); // Only mark as logged if not force logging
+        }
         return {
           id,
           title: data.title,
