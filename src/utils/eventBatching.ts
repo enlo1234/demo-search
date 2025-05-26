@@ -74,10 +74,10 @@ class EventBatcher {
 
     // Set new stability timer
     this.stabilityTimer = setTimeout(() => {
-      // If we reach here, viewport has been stable for 3 seconds
+      // If we reach here, viewport has been stable for 5 seconds
       this.isViewportChanging = false;
       this.logBatchedResults();
-    }, 3000);
+    }, 5000); // Changed from 3000 to 5000
   }
 
   addEvent(event: SearchEvent): void {
