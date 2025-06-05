@@ -27,7 +27,7 @@ function App() {
             <ul className="list-disc text-left max-w-md mx-auto mt-2 space-y-1">
               <li>When clicking a result</li>
               <li>When closing the window/tab</li>
-              <li>1 second after the viewport becomes stable</li>
+              <li>As soon as the viewport becomes stable (optional)</li>
             </ul>
           </p>
           <SearchBar onSearch={handleSearch} />
